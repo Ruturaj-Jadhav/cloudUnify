@@ -2,16 +2,10 @@ const express = require('express');
 const dotenv = require('dotenv');
 dotenv.config({ path: "config.env" });
 
-
-// set up database
 require("./models/db")
 
-
-
-// routes
 const authroutes = require("./routes/authRoutes");
 const driveAccessRoutes = require("./routes/driveAccessRoutes");
-
 
 const app = express();
 

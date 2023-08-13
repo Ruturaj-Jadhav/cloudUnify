@@ -13,7 +13,7 @@ const SCOPES = ["https://www.googleapis.com/auth/drive.readonly"];
 const auth = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
 
 // callback function
-exports.oauth2callback = (req, res) => {
+exports.oauth2callback = async (req, res) => {
   const code = req.query.code;
   auth.getToken(code, (err, token) => {
     if (err) return console.error("Error retrieving access token", err);
