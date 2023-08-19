@@ -36,12 +36,9 @@ exports.signup = async (req, res) => {
 };
 
 
-
 exports.signin = async (req, res) => {
     const userEmail = req.body.email;
     const password = req.body.password;
-
-    console.log(userEmail);
 
     const retrieve = "SELECT * FROM users WHERE email = $1";
 
@@ -62,10 +59,7 @@ exports.signin = async (req, res) => {
             return;
         }
 
-        const token = generateToken(data.rows[0].id);
-
-        localStorage.set(jwt, token);
-
+        const token = await generateToken(data.rows[0].id); // Call the generateToken function
         console.log("Token created successfully");
         res.status(200).json({ message: "Login successful.", token });
     } catch (error) {
@@ -73,6 +67,11 @@ exports.signin = async (req, res) => {
         res.status(500).json({ error: "An error occurred during login." });
     }
 };
+
+exports.check =(req,res,next) => {
+    console.log("Check");
+}
+
 
 
 

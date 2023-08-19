@@ -7,19 +7,39 @@ const client = require("../models/db");
 // Authentication middleware
 
 exports.authMiddleware = async (req, res, next) => {
-    const token = localStorage.get('jwt');
+  try {
+    const authHeader = req.header('Authorization');
+    const token = authHeader ? authHeader.replace('Bearer ', '') : null;
+
     if (!token) {
-      return res.status(401).json({ error: 'Unauthorized' });
+        return res.status(401).json({ error: 'No token provided.' });
     }
     try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      req.user = decoded;
-      next();
-    } catch (err) {
-      console.error(err);
-      return res.status(401).json({ error: 'Unauthorized' });
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const user_id = decoded.id; 
+
+        let query = 'SELECT FROM users WHERE id = $1';
+        let params = [user_id];
+        const result = await client.query(query, params);
+
+        if (result.rowCount < 1) {
+            return res.status(401).json({ error: 'Invalid User!' });
+        }
+
+        req.user = result.rows[0];
+        req.token = token;
+        next();
+    } catch (error) {
+        console.error(error);
+        return res.status(401).json({ error: 'Invalid token.' });
     }
+} catch (error) {
+    console.error(error);
+    return res.status(401).json({ error: 'Unauthorized user!' });
+}
 };
+
+
 exports.generateToken = async (user_id) => {
   const timestamp = new Date();
   const expirationTimestamp = new Date(timestamp.getTime() + 12 * 60 * 60 * 1000); // 12 hours later
