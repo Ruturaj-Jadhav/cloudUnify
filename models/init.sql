@@ -8,6 +8,15 @@ CREATE TABLE users (
   password_hash VARCHAR(255) NOT NULL
 );
 
+CREATE TABLE user_tokens (
+  id SERIAL PRIMARY KEY,
+  user_id INT NOT NULL REFERENCES users(id),
+  token TEXT NOT NULL,
+  expiration_timestamp TIMESTAMP NOT NULL,
+  issued_timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  revoked BOOLEAN DEFAULT false
+);
+
 CREATE TABLE google_tokens (
   id SERIAL PRIMARY KEY,
   user_id INT NOT NULL REFERENCES users(id),

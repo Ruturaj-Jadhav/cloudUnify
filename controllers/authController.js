@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const JWT_SECRET = process.env.JWT_SECRET;
 const client = require("../models/db");
 const localStorage = require("local-storage");
+const {generateToken} = require("../middlewares/authmiddleware")
 
 
 exports.signup = async (req, res) => {
@@ -61,14 +62,7 @@ exports.signin = async (req, res) => {
             return;
         }
 
-        const token = jwt.sign(
-            {
-                id: data.rows[0].id,
-                email: data.rows[0].email
-            },
-            JWT_SECRET,
-            { expiresIn: "2h" }
-        );
+        const token = generateToken(data.rows[0].id);
 
         localStorage.set(jwt, token);
 
