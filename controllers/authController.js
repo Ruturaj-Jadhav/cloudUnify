@@ -38,50 +38,47 @@ exports.signup = async (req, res) => {
 
 exports.signin = async (req, res) => {
     const userEmail = req.body.email;
-
     const password = req.body.password;
 
     console.log(userEmail);
 
-    const retrive  = "SELECT * FROM users WHERE email = $1";
+    const retrieve = "SELECT * FROM users WHERE email = $1";
 
     try {
+        const data = await client.query(retrieve, [userEmail]);
 
-        const data = await client.query(retrive,[userEmail]);
+        if (data.rowCount === 0) {
+            res.status(401).json({ error: "User not found. Please Sign Up." });
+            return;
+        }
 
-        if(data.rowCount == 0){ res.status(500).json({error: "User not found! Please Sign Up"}); } 
-        else {
+        const hashedPassword = data.rows[0].password_hash;
 
-            const hashedPassword = data.rows[0].password_hash;
+        const passwordMatch = await bcrypt.compare(password, hashedPassword);
 
-            console.log(hashedPassword);
+        if (!passwordMatch) {
+            res.status(401).json({ error: "Invalid Password." });
+            return;
+        }
 
-            if(await bcrypt.compare(password, hashedPassword)){
+        const token = jwt.sign(
+            {
+                id: data.rows[0].id,
+                email: data.rows[0].email
+            },
+            JWT_SECRET,
+            { expiresIn: "2h" }
+        );
 
-                const token = jwt.sign(
-                    {
-                    id: data.rows[0].id,
-                    email : data.rows[0].email
-                    },
-                    JWT_SECRET,
-                    { expiresIn: "2h" }
-                  );
+        localStorage.set(jwt, token);
 
-                  localStorage.set(jwt , token);
-
-                  console.log("Token created successfully")
-              
-            }
-            else {
-                res.json({ status: "error", error: "Invalid Password" });
-            }
-        }  
+        console.log("Token created successfully");
+        res.status(200).json({ message: "Login successful.", token });
+    } catch (error) {
+        console.error("Error during login:", error);
+        res.status(500).json({ error: "An error occurred during login." });
     }
-    catch (err) {
-        console.log(err);
-
-    };
-
 };
+
 
 

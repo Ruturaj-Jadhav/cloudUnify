@@ -2,6 +2,9 @@ const express = require("express");
 const { google } = require("googleapis");
 const fs = require("fs");
 const readline = require("readline");
+const client = require("../models/db");
+const localStorage = require("local-storage");
+
 
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
@@ -18,12 +21,41 @@ exports.oauth2callback = async (req, res) => {
   auth.getToken(code, (err, token) => {
     if (err) return console.error("Error retrieving access token", err);
     auth.setCredentials(token);
-    console.log(token.access_token);
+
+    console.log(token);
+    
+    const text = "INSERT INTO google_tokens(user_id, access_token, refresh_token, expires_at) VALUES ($1, $2, $3, $4)";
+
+    try {
+      const jwt = localStorage.get("jwt"); /* Assuming you have a way to decode the JWT */
+      const expiresInMs = token.expiry_date - Date.now(); // Calculate remaining time until expiration
+      const expiresAt = new Date(Date.now() + expiresInMs);
+
+      const values = [
+        2,
+        token.access_token,
+        token.refresh_token,
+        expiresAt
+      ];
+      
+      // Assuming you have a 'client' object properly configured
+      client.query(text, values, (err, result) => {
+        if (err) {
+          console.error("Error storing token in database:", err);
+        } else {
+          console.log("Token stored in database:", result);
+        }
+      });
+    } catch (err) {
+      console.error(err);
+    }
+
     fs.writeFileSync("token.json", JSON.stringify(token));
     console.log("Token stored to token.json");
     res.send("Authorization successful! You can close this window.");
   });
 };
+
 
 const rl = readline.createInterface({
   input: process.stdin,
