@@ -16,12 +16,11 @@ exports.authMiddleware = async (req, res, next) => {
     }
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
-        const user_id = decoded.id; 
+        const user_id = decoded.id;
 
-        let query = 'SELECT FROM users WHERE id = $1';
+        let query = "SELECT * FROM users WHERE id= $1";
         let params = [user_id];
         const result = await client.query(query, params);
-
         if (result.rowCount < 1) {
             return res.status(401).json({ error: 'Invalid User!' });
         }

@@ -3,7 +3,7 @@ const { google } = require("googleapis");
 const fs = require("fs");
 const readline = require("readline");
 const client = require("../models/db");
-const localStorage = require("local-storage");
+const { Console } = require("console");
 
 
 const CLIENT_ID = process.env.CLIENT_ID;
@@ -11,6 +11,8 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const REDIRECT_URI = process.env.REDIRECT_URI;
 
 const SCOPES = ["https://www.googleapis.com/auth/drive.readonly"];
+
+var user_id = null;
 
 // instance created
 const auth = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
@@ -21,21 +23,20 @@ exports.oauth2callback = async (req, res) => {
   auth.getToken(code, (err, token) => {
     if (err) return console.error("Error retrieving access token", err);
     auth.setCredentials(token);
-
-    console.log(token);
     
-    const text = "INSERT INTO google_tokens(user_id, access_token, refresh_token, expires_at) VALUES ($1, $2, $3, $4)";
+    const text = "INSERT INTO google_tokens(user_id, access_token, refresh_token, expires_at ,token) VALUES ($1, $2, $3, $4,$5)";
 
     try {
-      const jwt = localStorage.get("jwt"); /* Assuming you have a way to decode the JWT */
+      
       const expiresInMs = token.expiry_date - Date.now(); // Calculate remaining time until expiration
       const expiresAt = new Date(Date.now() + expiresInMs);
 
       const values = [
-        2,
+        user_id,
         token.access_token,
         token.refresh_token,
-        expiresAt
+        expiresAt,
+        JSON.stringify(token)
       ];
       
       // Assuming you have a 'client' object properly configured
@@ -104,12 +105,25 @@ function listFiles() {
   }
   
   
-  exports.initialize = (req,res) =>{
-    if (fs.existsSync('token.json')) {
-        const token = JSON.parse(fs.readFileSync('token.json'));
-        auth.setCredentials(token);
-        listFiles();
-      } else {
-        getAccessToken();
-      }
-    };
+  exports.initialize = async (req, res) => {
+    try {
+        user_id = req.user.id;
+        const query = "SELECT * FROM google_tokens WHERE user_id = $1";
+        const values = [user_id];
+
+        const tokenResult = await client.query(query, values);
+        const tokenRows = tokenResult.rows;
+
+        if (tokenRows.length > 0) {
+            const storedToken = JSON.parse(tokenRows[0].token);
+            auth.setCredentials(storedToken);
+            listFiles();
+        } else {
+            getAccessToken();
+        }
+    } catch (error) {
+        console.error("Error during initialization:", error);
+        res.status(500).json({ error: "An error occurred during initialization." });
+    }
+};
+
